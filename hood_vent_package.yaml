@@ -1,0 +1,260 @@
+# Hood Vent Smart Control Package
+# ================================
+# https://github.com/YOUR_USERNAME/ha-smart-hood-vent
+#
+# INSTALLATION:
+# 1. Copy this file to /config/packages/hood_vent_package.yaml
+# 2. Add to configuration.yaml:
+#      homeassistant:
+#        packages:
+#          hood_vent: !include packages/hood_vent_package.yaml
+# 3. Replace the entity IDs below with your actual entities
+# 4. Restart Home Assistant
+#
+# REQUIRED ENTITY IDS - Find these in Developer Tools → States:
+#   - YOUR_TEMPERATURE_SENSOR  (e.g., sensor.kitchen_temperature)
+#   - YOUR_HUMIDITY_SENSOR     (e.g., sensor.kitchen_humidity)
+#   - YOUR_HOOD_SWITCH         (e.g., switch.range_hood_vent)
+
+# ============================================================================
+# INPUT NUMBERS - Adjustable thresholds (tune via UI)
+# ============================================================================
+input_number:
+  hood_temp_rise_threshold:
+    name: "Hood: Temp Rise Threshold (°/min)"
+    min: 0.1
+    max: 3.0
+    step: 0.1
+    initial: 0.5
+    unit_of_measurement: "°/min"
+    icon: mdi:thermometer-chevron-up
+
+  hood_temp_fall_threshold:
+    name: "Hood: Temp Fall Threshold (°/min)"
+    min: -0.5
+    max: 0.5
+    step: 0.05
+    initial: 0.1
+    unit_of_measurement: "°/min"
+    icon: mdi:thermometer-chevron-down
+
+  hood_humidity_rise_threshold:
+    name: "Hood: Humidity Rise Threshold (%/min)"
+    min: 0.1
+    max: 5.0
+    step: 0.1
+    initial: 1.0
+    unit_of_measurement: "%/min"
+    icon: mdi:water-percent
+
+  hood_off_delay_minutes:
+    name: "Hood: Off Delay (minutes)"
+    min: 1
+    max: 10
+    step: 1
+    initial: 2
+    unit_of_measurement: "min"
+    icon: mdi:timer-outline
+
+# ============================================================================
+# INPUT BOOLEANS - Manual override and enable/disable
+# ============================================================================
+input_boolean:
+  hood_automation_enabled:
+    name: "Hood: Automation Enabled"
+    icon: mdi:robot
+
+  hood_manual_override:
+    name: "Hood: Manual Override Active"
+    icon: mdi:hand-back-left
+
+# ============================================================================
+# TEMPLATE SENSORS - Derivative calculations
+# ============================================================================
+template:
+  - sensor:
+      # Temperature rate of change (calculated from recent readings)
+      - name: "Kitchen Temp Rate of Change"
+        unique_id: kitchen_temp_rate_of_change
+        unit_of_measurement: "°/min"
+        state_class: measurement
+        icon: mdi:chart-line
+        state: >
+          {{ states('sensor.kitchen_temp_derivative') | float(0) | round(2) }}
+        availability: >
+          {{ states('sensor.kitchen_temp_derivative') not in ['unknown', 'unavailable'] }}
+
+      # Humidity rate of change
+      - name: "Kitchen Humidity Rate of Change"
+        unique_id: kitchen_humidity_rate_of_change
+        unit_of_measurement: "%/min"
+        state_class: measurement
+        icon: mdi:chart-line
+        state: >
+          {{ states('sensor.kitchen_humidity_derivative') | float(0) | round(2) }}
+        availability: >
+          {{ states('sensor.kitchen_humidity_derivative') not in ['unknown', 'unavailable'] }}
+
+  - binary_sensor:
+      # Stove activity detection based on rate of change
+      - name: "Stove Activity Detected"
+        unique_id: stove_activity_detected
+        device_class: heat
+        icon: mdi:stove
+        state: >
+          {% set temp_rate = states('sensor.kitchen_temp_rate_of_change') | float(0) %}
+          {% set humidity_rate = states('sensor.kitchen_humidity_rate_of_change') | float(0) %}
+          {% set temp_threshold = states('input_number.hood_temp_rise_threshold') | float(0.5) %}
+          {% set humidity_threshold = states('input_number.hood_humidity_rise_threshold') | float(1.0) %}
+          {{ temp_rate > temp_threshold or humidity_rate > humidity_threshold }}
+        delay_off:
+          minutes: 1
+
+# ============================================================================
+# DERIVATIVE SENSORS - Core rate-of-change calculations
+# ============================================================================
+# >>> REPLACE sensor.YOUR_TEMPERATURE_SENSOR with your actual entity ID <<<
+# >>> REPLACE sensor.YOUR_HUMIDITY_SENSOR with your actual entity ID <<<
+sensor:
+  - platform: derivative
+    source: sensor.YOUR_TEMPERATURE_SENSOR  # ← CHANGE THIS
+    name: "Kitchen Temp Derivative"
+    unit_time: min
+    time_window: "00:02:00"
+    round: 2
+
+  - platform: derivative
+    source: sensor.YOUR_HUMIDITY_SENSOR  # ← CHANGE THIS
+    name: "Kitchen Humidity Derivative"
+    unit_time: min
+    time_window: "00:02:00"
+    round: 2
+
+# ============================================================================
+# STATISTICS SENSORS - For dashboard history
+# ============================================================================
+  - platform: statistics
+    name: "Kitchen Temp Stats (10min)"
+    entity_id: sensor.YOUR_TEMPERATURE_SENSOR  # ← CHANGE THIS
+    state_characteristic: change
+    max_age:
+      minutes: 10
+
+# ============================================================================
+# AUTOMATIONS
+# ============================================================================
+# >>> REPLACE switch.YOUR_HOOD_SWITCH with your actual entity ID <<<
+automation:
+  # -------------------------------------------------------------------------
+  # Turn hood ON when stove activity detected
+  # -------------------------------------------------------------------------
+  - id: hood_vent_auto_on
+    alias: "Hood Vent: Auto On"
+    description: "Turn on hood when temperature or humidity rising quickly"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.stove_activity_detected
+        to: "on"
+        for:
+          seconds: 30
+    condition:
+      - condition: state
+        entity_id: input_boolean.hood_automation_enabled
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.hood_manual_override
+        state: "off"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+      - service: logbook.log
+        data:
+          name: "Hood Vent"
+          message: "Auto ON - Stove activity detected"
+          entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+    mode: single
+
+  # -------------------------------------------------------------------------
+  # Turn hood OFF when cooling detected (temperature stabilized/falling)
+  # -------------------------------------------------------------------------
+  - id: hood_vent_auto_off
+    alias: "Hood Vent: Auto Off"
+    description: "Turn off hood when temperature rate falls below threshold"
+    trigger:
+      - platform: template
+        value_template: >
+          {% set temp_rate = states('sensor.kitchen_temp_rate_of_change') | float(0) %}
+          {% set threshold = states('input_number.hood_temp_fall_threshold') | float(0.1) %}
+          {{ temp_rate < threshold }}
+        for:
+          minutes: "{{ states('input_number.hood_off_delay_minutes') | int(2) }}"
+    condition:
+      - condition: state
+        entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.hood_automation_enabled
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.hood_manual_override
+        state: "off"
+      - condition: state
+        entity_id: binary_sensor.stove_activity_detected
+        state: "off"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+      - service: logbook.log
+        data:
+          name: "Hood Vent"
+          message: "Auto OFF - Cooling detected"
+          entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+    mode: single
+
+  # -------------------------------------------------------------------------
+  # Manual override detection - if user manually toggles, pause automation
+  # -------------------------------------------------------------------------
+  - id: hood_vent_manual_override_on
+    alias: "Hood Vent: Detect Manual Override"
+    description: "Detect manual control and pause automation temporarily"
+    trigger:
+      - platform: state
+        entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+    condition:
+      - condition: template
+        value_template: "{{ trigger.context.user_id is not none }}"
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hood_manual_override
+      - delay:
+          minutes: 30
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hood_manual_override
+    mode: restart
+
+  # -------------------------------------------------------------------------
+  # Safety: Auto-off after max runtime
+  # -------------------------------------------------------------------------
+  - id: hood_vent_safety_off
+    alias: "Hood Vent: Safety Auto Off (Max Runtime)"
+    description: "Turn off hood after 2 hours regardless of conditions"
+    trigger:
+      - platform: state
+        entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+        to: "on"
+        for:
+          hours: 2
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.YOUR_HOOD_SWITCH  # ← CHANGE THIS
+      - service: persistent_notification.create
+        data:
+          title: "Hood Vent Safety Shutoff"
+          message: "Hood turned off after 2 hour maximum runtime"
+          notification_id: hood_safety_off
+    mode: single
