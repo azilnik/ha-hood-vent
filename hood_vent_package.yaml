@@ -1,6 +1,6 @@
 # Hood Vent Smart Control Package
 # ================================
-# https://github.com/YOUR_USERNAME/ha-smart-hood-vent
+# https://github.com/azilnik/ha-smart-hood-vent
 #
 # INSTALLATION:
 # 1. Copy this file to /config/packages/hood_vent_package.yaml

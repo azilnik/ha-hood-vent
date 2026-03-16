@@ -16,9 +16,9 @@ This package detects **rate of change** instead of absolute temperature. When th
 
 | Component | Purpose | Approx. Price |
 |-----------|---------|---------------|
-| [Third Reality Zigbee Temperature & Humidity Sensor](https://www.amazon.com/THIRDREALITY-Zigbee-Temperature-Humidity-Sensor/dp/B0BN32XX24?tag=YOUR_TAG) | Detects cooking activity via temp/humidity changes | ~$20 |
-| [SwitchBot Bot](https://www.amazon.com/SwitchBot-switch-button-controlled-compatible/dp/B07B7NXV4R?tag=YOUR_TAG) + [SwitchBot Hub](https://www.amazon.com/SwitchBot-Thermometer-Hygrometer-Bluetooth-Temperature/dp/B07TTH451R?tag=YOUR_TAG) | Physically presses your existing hood vent button | ~$30 + ~$40 |
-| [SMLIGHT SLZB-06](https://www.amazon.com/SMLIGHT-SLZB-06-Coordinator-Zigbee2MQTT-Assistant/dp/B0BL6DQSB3?tag=YOUR_TAG) | Zigbee coordinator (Ethernet/USB/WiFi with PoE) | ~$45 |
+| [Third Reality Zigbee Temperature & Humidity Sensor](https://www.amazon.com/THIRDREALITY-Zigbee-Temperature-Humidity-Sensor/dp/B0BN32XX24) | Detects cooking activity via temp/humidity changes | ~$20 |
+| [SwitchBot Bot](https://www.amazon.com/SwitchBot-switch-button-controlled-compatible/dp/B07B7NXV4R) + [SwitchBot Hub](https://www.amazon.com/SwitchBot-Thermometer-Hygrometer-Bluetooth-Temperature/dp/B07TTH451R) | Physically presses your existing hood vent button | ~$30 + ~$40 |
+| [SMLIGHT SLZB-06](https://www.amazon.com/SMLIGHT-SLZB-06-Coordinator-Zigbee2MQTT-Assistant/dp/B0BL6DQSB3) | Zigbee coordinator (Ethernet/USB/WiFi with PoE) | ~$45 |
 
 **Total:** ~$135 (one-time, no subscription)
 
@@ -171,4 +171,3 @@ MIT License — use freely, attribution appreciated.
 
 ---
 
-**Note on Affiliate Links:** Links to Amazon products include affiliate tags. If you'd prefer not to use them, simply remove the `?tag=YOUR_TAG` portion of each URL. The products work the same either way.
