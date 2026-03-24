@@ -10,6 +10,10 @@
   <a href="https://github.com/azilnik/ha-smart-hood-vent/stargazers"><img src="https://img.shields.io/github/stars/azilnik/ha-smart-hood-vent?style=flat" alt="Stars"></a>
 </p>
 
+<p align="center">
+  <img src="docs/images/demo.gif" alt="Demo: stove turns on and the hood vent automatically activates" width="600"/>
+</p>
+
 ---
 
 ## Why This Exists
