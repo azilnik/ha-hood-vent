@@ -1,6 +1,6 @@
 # Hood Vent Smart Control Package
 # ================================
-# https://github.com/azilnik/ha-smart-hood-vent
+# https://github.com/azilnik/ha-hood-vent
 #
 # SETUP:
 # 1. Add 3 entity IDs to your secrets.yaml (see secrets_example.yaml)
@@ -230,7 +230,7 @@ automation:
           entity_id: !secret hood_switch
       - service: persistent_notification.create
         data:
-          title: "Hood Vent Safety Shutoff"
-          message: "Hood turned off after 2 hour maximum runtime"
+          title: "Hood Vent: Safety Shutoff"
+          message: "Hood vent turned off after the 2-hour safety limit. Still cooking? Turn it back on manually."
           notification_id: hood_safety_off
     mode: single
