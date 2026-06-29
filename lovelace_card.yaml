@@ -66,7 +66,7 @@ cards:
       legend: true
 
   - type: history-graph
-    title: Derivative Values (Last 2 Hours)
+    title: Rate of Change (Last 2 Hours)
     hours_to_show: 2
     entities:
       - entity: sensor.kitchen_temp_rate_of_change
