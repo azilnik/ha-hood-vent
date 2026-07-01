@@ -53,6 +53,38 @@ input_number:
     unit_of_measurement: "min"
     icon: mdi:timer-outline
 
+  hood_on_confirm_seconds:
+    name: "Hood: On Confirmation (seconds)"
+    min: 15
+    max: 180
+    step: 5
+    initial: 60
+    unit_of_measurement: "s"
+    icon: mdi:timer-check-outline
+
+  # Warm-ambient (summer) desensitization. When the kitchen's smoothed ambient
+  # temperature climbs above the baseline below, the ON thresholds are scaled up
+  # so hot/humid summer air, AC cycling, an open window, or someone just
+  # breathing near the sensor no longer looks like cooking. When the kitchen is
+  # cool (winter), the boost is zero and full sensitivity is preserved.
+  hood_warm_ambient_temp:
+    name: "Hood: Warm Ambient Baseline (°C)"
+    min: 15
+    max: 30
+    step: 0.5
+    initial: 24
+    unit_of_measurement: "°C"
+    icon: mdi:sun-thermometer
+
+  hood_warm_ambient_boost:
+    name: "Hood: Warm Ambient Boost (per °C)"
+    min: 0
+    max: 0.3
+    step: 0.01
+    initial: 0.06
+    unit_of_measurement: "×/°C"
+    icon: mdi:tune-vertical
+
 # ============================================================================
 # INPUT BOOLEANS - Manual override and enable/disable
 # ============================================================================
@@ -100,7 +132,16 @@ template:
           {% set humidity_rate = states('sensor.kitchen_humidity_rate_of_change') | float(0) %}
           {% set temp_threshold = states('input_number.hood_temp_rise_threshold') | float(0.5) %}
           {% set humidity_threshold = states('input_number.hood_humidity_rise_threshold') | float(1.0) %}
-          {{ temp_rate > temp_threshold or humidity_rate > humidity_threshold }}
+          {# Warm-ambient boost: scale thresholds up as the kitchen's smoothed  #}
+          {# ambient temperature rises above the baseline. Zero in winter.       #}
+          {% set ambient = states('sensor.kitchen_temp_average') | float(20) %}
+          {% set warm_ref = states('input_number.hood_warm_ambient_temp') | float(24) %}
+          {% set boost = states('input_number.hood_warm_ambient_boost') | float(0.06) %}
+          {% set warmth = [ambient - warm_ref, 0] | max %}
+          {% set factor = 1 + warmth * boost %}
+          {% set temp_eff = temp_threshold * factor %}
+          {% set humidity_eff = humidity_threshold * factor %}
+          {{ temp_rate > temp_eff or humidity_rate > humidity_eff }}
         delay_off:
           minutes: 1
 
@@ -112,14 +153,16 @@ sensor:
     source: !secret hood_temperature_sensor
     name: "Kitchen Temp Derivative"
     unit_time: min
-    time_window: "00:02:00"
+    # 3-minute window smooths out transient spikes (a breath, an open window,
+    # AC cycling) while still catching real cooking within ~1 minute.
+    time_window: "00:03:00"
     round: 2
 
   - platform: derivative
     source: !secret hood_humidity_sensor
     name: "Kitchen Humidity Derivative"
     unit_time: min
-    time_window: "00:02:00"
+    time_window: "00:03:00"
     round: 2
 
   - platform: statistics
@@ -128,6 +171,15 @@ sensor:
     state_characteristic: change
     max_age:
       minutes: 10
+
+  # Smoothed ambient temperature — the baseline the room is sitting at, ignoring
+  # short cooking spikes. Feeds the warm-ambient (summer) threshold boost above.
+  - platform: statistics
+    name: "Kitchen Temp Average"
+    entity_id: !secret hood_temperature_sensor
+    state_characteristic: mean
+    max_age:
+      minutes: 30
 
 # ============================================================================
 # AUTOMATIONS
@@ -141,7 +193,7 @@ automation:
         entity_id: binary_sensor.stove_activity_detected
         to: "on"
         for:
-          seconds: 30
+          seconds: "{{ states('input_number.hood_on_confirm_seconds') | int(60) }}"
     condition:
       - condition: state
         entity_id: input_boolean.hood_automation_enabled
