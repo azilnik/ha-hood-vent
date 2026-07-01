@@ -2,7 +2,7 @@
 
 Most automations watch for a **temperature threshold** (e.g., "turn on when kitchen hits 26 °C"). This is slow because temperature lags behind actual cooking activity.
 
-This package watches the **rate of change** — how many degrees the temperature changes per minute. It uses Home Assistant's built-in [derivative sensor](https://www.home-assistant.io/integrations/derivative/) to calculate this over a 2-minute rolling window.
+This package watches the **rate of change** — how many degrees the temperature changes per minute. It uses Home Assistant's built-in [derivative sensor](https://www.home-assistant.io/integrations/derivative/) to calculate this over a 3-minute rolling window, which smooths out brief spikes (a breath near the sensor, an open window, AC cycling) while still catching real cooking within about a minute.
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
     end
 
     subgraph Logic["Rate-of-Change Logic"]
-        ON{"Rate > 0.5°/min?\nor humidity rising?"}
+        ON{"Rate > threshold?\n(threshold rises with\nwarm ambient temp)"}
         OFF{"Rate < 0.1°/min\nfor 2+ minutes?"}
     end
 
@@ -52,8 +52,9 @@ The top bar shows the hood state (off → on → off). The middle graph is the r
 |----------|----------------|-------------------------------|
 | Start cooking | Waits until kitchen heats up (5–10 min) | Detects rising temp within 30–60 sec |
 | Stop cooking | Waits for kitchen to cool down (10–15 min) | Detects rate dropping within 2–3 min |
-| Hot day, kitchen already warm | May trigger falsely | Ignores — temp isn't *changing* fast |
-| Open oven to check food | May trigger from heat blast | Brief spike smoothed by 2-min window |
+| Hot day, kitchen already warm | May trigger falsely | Ignores — temp isn't *changing* fast, and thresholds auto-stiffen when the room is warm |
+| Open oven to check food | May trigger from heat blast | Brief spike smoothed by 3-min window |
+| Muggy summer air / breathing near sensor | May trigger falsely | Warm-ambient boost raises the bar; 60-sec confirmation rejects transients |
 
 ## Key Integrations Used
 

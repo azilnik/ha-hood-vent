@@ -15,7 +15,20 @@
 
 1. **Raise the threshold.** Increase `hood_temp_rise_threshold` to `0.7` or `1.0`.
 2. **Check sensor placement.** Is it near a window, HVAC vent, or in direct sunlight? These cause temperature fluctuations that look like cooking.
-3. **Check the 30-second confirmation.** The automation waits 30 seconds of sustained rising before triggering. If you're still getting false triggers, the rate is genuinely above threshold for that long — raise it further.
+3. **Check the confirmation window.** The automation waits for `hood_on_confirm_seconds` (default 60 s) of sustained rising before triggering. If you're still getting false triggers, the rate is genuinely above threshold for that long — raise the threshold further or lengthen the confirmation.
+</details>
+
+<details>
+<summary><strong>False triggers mostly in summer / warm weather</strong></summary>
+
+Warm, humid summer air is noisier — AC cycling, open windows, muggy air drifting in, even breathing near the sensor can briefly look like cooking. The package already stiffens the ON thresholds automatically as the kitchen warms, but you can dial it up:
+
+1. **Increase the warm-ambient boost.** Raise `hood_warm_ambient_boost` from `0.06` to `0.10` (or higher). This multiplies the ON thresholds up more aggressively the hotter the room gets.
+2. **Lower the warm-ambient baseline.** Drop `hood_warm_ambient_temp` from `24` toward `22` so the boost engages sooner.
+3. **Confirm the ambient sensor is reporting.** In **Developer Tools → States**, check `sensor.kitchen_temp_average` shows your room temperature. If it's `unavailable`, the boost falls back to a safe 20 °C (no boost) — the derivative sensors need ~30 min of history after a restart to populate it.
+4. **Lengthen the confirmation window.** Raise `hood_on_confirm_seconds` to `90` so short-lived spikes are rejected.
+
+Winter sensitivity is unaffected by any of this — the boost is zero whenever the kitchen is at or below the baseline. See the [Tuning Guide](tuning.md#rejecting-warm-weather-false-triggers) for the full explanation.
 </details>
 
 <details>

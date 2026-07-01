@@ -93,6 +93,16 @@ cards:
         name: Temp rise to turn ON
       - entity: input_number.hood_humidity_rise_threshold
         name: Humidity rise to turn ON
+      - entity: input_number.hood_on_confirm_seconds
+        name: Seconds of activity before ON
+      - type: section
+        label: Warm-weather (summer) tuning
+      - entity: input_number.hood_warm_ambient_temp
+        name: Warm ambient baseline
+      - entity: input_number.hood_warm_ambient_boost
+        name: Threshold boost per °C above baseline
+      - entity: sensor.kitchen_temp_average
+        name: Current smoothed ambient temp
       - type: section
         label: OFF Triggers
       - entity: input_number.hood_temp_fall_threshold
@@ -155,5 +165,8 @@ cards:
 #     entities:
 #       - input_number.hood_temp_rise_threshold
 #       - input_number.hood_humidity_rise_threshold
+#       - input_number.hood_on_confirm_seconds
+#       - input_number.hood_warm_ambient_temp
+#       - input_number.hood_warm_ambient_boost
 #       - input_number.hood_temp_fall_threshold
 #       - input_number.hood_off_delay_minutes

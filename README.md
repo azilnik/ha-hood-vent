@@ -24,7 +24,7 @@ Gas stoves [put out real pollutants](https://rmi.org/insight/gas-stoves-pollutio
 
 Most smart hood setups wait for your kitchen to hit a temperature threshold before kicking in. By then you've been cooking for 10 minutes. And when you stop, residual heat keeps the hood running long after.
 
-This package watches the **rate of change** instead — how *fast* the temperature is rising or falling. Your hood turns on within 30–60 seconds of starting to cook and off within 2–3 minutes of stopping.
+This package watches the **rate of change** instead — how *fast* the temperature is rising or falling. Your hood turns on within a minute or so of starting to cook and off within 2–3 minutes of stopping — and it stays quiet on hot, muggy days when the kitchen is warm but nothing's actually cooking.
 
 <p align="center">
   <img src="docs/images/dashboard-cooking-session.png" alt="Dashboard showing hood turning on automatically when cooking is detected via temperature rate of change" width="700"/>
@@ -96,6 +96,7 @@ Once it's running, there are a few things worth checking out:
 |---------|-------------|
 | **Rate-of-change detection** | Responds to cooking activity, not absolute temp — way faster on and off |
 | **Dual triggers** | Watches both temperature and humidity (steam from boiling triggers even when temp rise is slow) |
+| **Warm-weather immunity** | Auto-stiffens the trigger as the kitchen warms so muggy summer air doesn't switch the hood — while leaving winter sensitivity untouched |
 | **UI-adjustable thresholds** | Tune sensitivity with dashboard sliders — no more YAML editing after initial setup |
 | **Manual override** | Manually toggle the hood and automation pauses for 30 min so it doesn't fight you |
 | **Safety shutoff** | Auto-off after 2 hours max, just in case |

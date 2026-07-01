@@ -10,6 +10,41 @@ Every kitchen is different — sensor distance from the stove, ventilation, stov
 | Humidity Rise Threshold | 1.0 %/min | How fast humidity must rise to trigger ON |
 | Temp Fall Threshold | 0.1 °/min | Rate below this means cooking has stopped |
 | Off Delay | 2 min | How long the rate must stay low before the hood turns OFF |
+| On Confirmation | 60 s | How long activity must be sustained before the hood turns ON |
+| Warm Ambient Baseline | 24 °C | Kitchen temp above which summer desensitization kicks in |
+| Warm Ambient Boost | 0.06 ×/°C | How much to stiffen the ON thresholds per °C above the baseline |
+
+## Rejecting Warm-Weather False Triggers
+
+In summer the kitchen sits warmer and more humid, and there's more background
+noise — AC cycling, open windows, hot humid air drifting in, even someone
+breathing near the sensor. Any of that can briefly look like cooking. Three
+mechanisms keep it from switching the hood:
+
+1. **Smoothing** — the rate of change is averaged over a 3-minute window, so a
+   single breath or a brief gust barely moves the needle.
+2. **Confirmation** — activity has to stay above threshold for the full **On
+   Confirmation** time (60 s by default) before the hood turns on. Transients
+   don't last that long; real cooking does.
+3. **Warm-ambient boost** — the automation watches the kitchen's *smoothed
+   ambient temperature* (`sensor.kitchen_temp_average`). For every degree it
+   sits above the **Warm Ambient Baseline**, the ON thresholds are multiplied
+   up by the **Warm Ambient Boost**. Effective threshold = base × (1 + degrees‑above‑baseline × boost).
+
+   | Kitchen ambient | Season (Toronto) | Effective temp threshold | Effective humidity threshold |
+   |-----------------|------------------|--------------------------|------------------------------|
+   | 20 °C | Winter | 0.50 °/min (unchanged) | 1.00 %/min (unchanged) |
+   | 24 °C | Spring/Fall | 0.50 °/min | 1.00 %/min |
+   | 28 °C | Summer | 0.62 °/min | 1.24 %/min |
+   | 32 °C | Heat wave | 0.74 °/min | 1.48 %/min |
+
+   Because the boost is zero until the kitchen is genuinely warm, **winter
+   sensitivity is untouched** — you're only trading a little summer twitchiness
+   for a stiffer trigger on hot days.
+
+**Still getting summer false triggers?** Raise **Warm Ambient Boost** (e.g. to
+0.10) or lower the **Warm Ambient Baseline**. **Summer cooking not detected?**
+Lower the boost or raise the baseline.
 
 ## How to Tune
 
