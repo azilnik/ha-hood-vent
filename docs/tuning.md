@@ -2,14 +2,16 @@
 
 Every kitchen is different — sensor distance from the stove, ventilation, stove type (gas vs. electric vs. induction) all affect the readings. The [dashboard card](dashboard.md) includes sliders to adjust thresholds without editing YAML.
 
+> **Your slider changes persist.** The tunables have no `initial:` value, so Home Assistant restores whatever you last set across restarts and reloads. The defaults below are seeded only once, on first install (via the `Hood Vent: Seed Defaults` automation, guarded by `input_boolean.hood_defaults_seeded`).
+
 ## Default Thresholds
 
 | Setting | Default | What it controls |
 |---------|---------|-----------------|
 | Temp Rise Threshold | 0.5 °/min | How fast temp must rise to trigger the hood ON |
-| Humidity Rise Threshold | 1.0 %/min | How fast humidity must rise to trigger ON |
-| Temp Fall Threshold | 0.1 °/min | Rate below this means cooking has stopped |
-| Off Delay | 2 min | How long the rate must stay low before the hood turns OFF |
+| Humidity Rise Threshold | 1.5 %/min | How fast humidity must rise to trigger ON (1.0 was too twitchy in humid kitchens) |
+| Temp Fall Threshold | 0.1 °/min | *(legacy — no longer used; OFF now keys off stove activity)* |
+| Off Delay | 2 min | How long stove activity must stay clear before the hood turns OFF |
 | On Confirmation | 60 s | How long activity must be sustained before the hood turns ON |
 | Warm Ambient Baseline | 24 °C | Kitchen temp above which summer desensitization kicks in |
 | Warm Ambient Boost | 0 ×/°C (off) | How much to stiffen the ON thresholds per °C above the baseline. **Opt-in — off by default.** |
