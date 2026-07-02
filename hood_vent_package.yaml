@@ -1,6 +1,6 @@
 # Hood Vent Smart Control Package
 # ================================
-# https://github.com/azilnik/ha-hood-vent
+# https://github.com/azilnik/ha-smart-hood-vent
 #
 # SETUP:
 # 1. Add 3 entity IDs to your secrets.yaml (see secrets_example.yaml)
@@ -81,7 +81,12 @@ input_number:
     min: 0
     max: 0.3
     step: 0.01
-    initial: 0.06
+    # Off by default (opt-in). The warm-ambient boost only makes sense when the
+    # temperature sensor reads true ROOM ambient. On a stovetop-mounted sensor
+    # (the common setup) the 30-min mean is polluted by cooking heat, so a
+    # positive boost desensitizes detection mid-cook — backwards. Raise this
+    # only if your temp source is a wall/room sensor. See docs/tuning.md.
+    initial: 0
     unit_of_measurement: "×/°C"
     icon: mdi:tune-vertical
 
@@ -255,7 +260,12 @@ automation:
         entity_id: !secret hood_switch
     condition:
       - condition: template
-        value_template: "{{ trigger.context.user_id is not none }}"
+        # Guard trigger.context: at startup validation (and reloads) the
+        # condition is rendered once with no trigger, so an unguarded
+        # trigger.context.user_id throws UndefinedError. Short-circuit first.
+        value_template: >-
+          {{ trigger is defined and trigger.context is defined
+             and trigger.context.user_id is not none }}
     action:
       - service: input_boolean.turn_on
         target:
