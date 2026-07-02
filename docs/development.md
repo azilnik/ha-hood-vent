@@ -57,10 +57,10 @@ hot-reload.
 If you'd rather not run a command each time, [`scripts/nas-sync.sh`](../scripts/nas-sync.sh)
 polls this repo on the NAS and syncs on change. Set it up once:
 
-1. Clone the repo on the NAS: `git clone … /volume1/docker/ha-smart-hood-vent`
+1. Clone the repo on the NAS: `git clone … /volume1/docker/ha-hood-vent`
 2. Save the token: `mkdir -p /volume1/docker/.hood-vent && echo '<token>' > /volume1/docker/.hood-vent/ha_token && chmod 600 /volume1/docker/.hood-vent/ha_token`
 3. DSM → Control Panel → **Task Scheduler** → Scheduled Task → run as **root**,
-   every ~5 min: `sh /volume1/docker/ha-smart-hood-vent/scripts/nas-sync.sh`
+   every ~5 min: `sh /volume1/docker/ha-hood-vent/scripts/nas-sync.sh`
 
 Running as root avoids the sudo prompt; the script only touches HA when the
 package file actually changed.

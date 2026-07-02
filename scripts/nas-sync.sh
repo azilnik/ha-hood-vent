@@ -14,7 +14,7 @@
 
 set -eu
 
-REPO_DIR="${REPO_DIR:-/volume1/docker/ha-smart-hood-vent}"
+REPO_DIR="${REPO_DIR:-/volume1/docker/ha-hood-vent}"
 TOKEN_FILE="${TOKEN_FILE:-/volume1/docker/.hood-vent/ha_token}"
 HA_URL="${HA_URL:-http://localhost:8123}"
 HA_CONFIG_PACKAGES="${HA_CONFIG_PACKAGES:-/config/packages}"

@@ -1,6 +1,6 @@
 # Hood Vent Smart Control Package
 # ================================
-# https://github.com/azilnik/ha-smart-hood-vent
+# https://github.com/azilnik/ha-hood-vent
 #
 # SETUP:
 # 1. Add 3 entity IDs to your secrets.yaml (see secrets_example.yaml)
