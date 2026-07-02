@@ -25,49 +25,59 @@ your edits from GitHub into HA with minimal fuss.
   [`lovelace_card.yaml`](../lovelace_card.yaml) is a reference card to paste in,
   not something `deploy.sh` pushes.
 
+## One-time setup on the NAS
+
+HA's `/config` is a bind mount owned by the SSH user, so deploys need **no sudo
+and no docker** — just copy the file and hit the reload API. Create a small
+config + token the scripts read:
+
+```bash
+mkdir -p /volume1/docker/.hood-vent
+cat > /volume1/docker/.hood-vent/config <<'EOF'
+REPO_DIR="/volume1/docker/ha-hood-vent"
+HA_PACKAGES_DIR="/path/to/your/ha/config/packages"   # HA's /config/packages on the host
+HA_URL="http://localhost:8123"
+EOF
+# long-lived token: HA > Profile > Security > Long-lived access tokens
+printf '%s' '<TOKEN>' > /volume1/docker/.hood-vent/ha_token
+chmod 600 /volume1/docker/.hood-vent/ha_token
+git clone https://github.com/azilnik/ha-hood-vent.git /volume1/docker/ha-hood-vent
+```
+
 ## The edit → GitHub → HA loop
 
 1. Edit `hood_vent_package.yaml` (or docs) locally.
-2. Commit and push to `main`.
-3. Deploy:
-
-   ```bash
-   cp deploy.env.example deploy.env   # first time only, then fill in the token
-   ./scripts/deploy.sh                # copy package in + reload_all (no restart)
-   ./scripts/deploy.sh --restart      # use when you ADD/REMOVE a statistics or
-                                      # derivative sensor (those don't hot-reload)
-   ```
-
-   `deploy.sh` stages the file to the NAS, `sudo docker cp`s it into the
-   container (one sudo prompt), validates the config via the API, then reloads.
-
-`deploy.env` holds a **long-lived HA token** (Profile → Security) and is
-gitignored — never commit it.
+2. Commit → PR → merge to `main`.
+3. Deploy — either:
+   - From your Mac: `./scripts/deploy.sh` (or `--restart`). Stages the file over
+     SSH, copies it into the bind mount, validates, and reloads.
+   - Or just let the auto-sync pick it up (below).
 
 ### What hot-reloads vs needs a restart
 
 `reload_all` covers `input_number`, `input_boolean`, `template`, `automation`,
 and most `sensor` changes — fine for day-to-day tuning and automation edits.
-A **restart** is only needed when you add or remove a `statistics` / `derivative`
-sensor *platform* entry, because those legacy `sensor:` platforms don't
-hot-reload.
+A **restart** (`deploy.sh --restart`) is only needed when you add or remove a
+`statistics` / `derivative` sensor *platform* entry, because those legacy
+`sensor:` platforms don't hot-reload.
 
-## Optional: hands-off auto-deploy
+## Hands-off auto-deploy
 
-If you'd rather not run a command each time, [`scripts/nas-sync.sh`](../scripts/nas-sync.sh)
-polls this repo on the NAS and syncs on change. Set it up once:
+[`scripts/nas-sync.sh`](../scripts/nas-sync.sh) pulls `main` on the NAS and
+deploys the package whenever it changes — no sudo, runs as your normal user.
+Schedule it in **DSM → Control Panel → Task Scheduler → Scheduled Task**, run as
+your account (not root), every ~5 min:
 
-1. Clone the repo on the NAS: `git clone … /volume1/docker/ha-hood-vent`
-2. Save the token: `mkdir -p /volume1/docker/.hood-vent && echo '<token>' > /volume1/docker/.hood-vent/ha_token && chmod 600 /volume1/docker/.hood-vent/ha_token`
-3. DSM → Control Panel → **Task Scheduler** → Scheduled Task → run as **root**,
-   every ~5 min: `sh /volume1/docker/ha-hood-vent/scripts/nas-sync.sh`
+```
+sh /volume1/docker/ha-hood-vent/scripts/nas-sync.sh
+```
 
-Running as root avoids the sudo prompt; the script only touches HA when the
-package file actually changed.
+It's a quiet no-op unless the deployed copy differs from `main`, so it's cheap to
+run often. Merge a PR → within ~5 min it's live in HA.
 
 > A GitHub Action could do this on push instead, but it would need network
 > access to the NAS (the SSH port isn't internet-exposed), so it'd require a
-> self-hosted runner or a tunnel. The NAS cron above is simpler for a home LAN.
+> self-hosted runner or a tunnel. The NAS task above is simpler for a home LAN.
 
 ## Why not HACS?
 
