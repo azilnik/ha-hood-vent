@@ -8,9 +8,10 @@ your edits from GitHub into HA with minimal fuss.
 - **Home Assistant** runs as a Docker container (`linuxserver/homeassistant`,
   **no Supervisor / add-ons**) on a Synology NAS, reached at `ha.zilnik.me`
   through a Cloudflare tunnel.
-- HA's `/config` is a **root-owned Docker named volume**, so config files are
-  written into the container with `sudo docker cp` — you can't just edit them
-  as the SSH user.
+- HA's `/config` is a **bind mount at `/volume1/docker/homeassistant`**, owned by
+  your NAS user (the container runs as `PUID` 1026), so you can read and write
+  the package file directly from an SSH shell — no `sudo`, no `docker cp` needed.
+  (Each dockerized app lives under its own `/volume1/docker/<app>` folder.)
 - The package is wired in via `configuration.yaml`:
 
   ```yaml
@@ -38,8 +39,8 @@ your edits from GitHub into HA with minimal fuss.
                                       # derivative sensor (those don't hot-reload)
    ```
 
-   `deploy.sh` stages the file to the NAS, `sudo docker cp`s it into the
-   container (one sudo prompt), validates the config via the API, then reloads.
+   `deploy.sh` stages the file to the NAS, copies it into the container with
+   `docker cp`, validates the config via the API, then reloads.
 
 `deploy.env` holds a **long-lived HA token** (Profile → Security) and is
 gitignored — never commit it.
@@ -55,15 +56,20 @@ hot-reload.
 ## Optional: hands-off auto-deploy
 
 If you'd rather not run a command each time, [`scripts/nas-sync.sh`](../scripts/nas-sync.sh)
-polls this repo on the NAS and syncs on change. Set it up once:
+polls this repo on the NAS and syncs on change. It runs as **your normal user** —
+no sudo, no docker — because `/config` is a bind mount you own and the reload
+goes through HA's REST API. Set it up once:
 
 1. Clone the repo on the NAS: `git clone … /volume1/docker/ha-hood-vent`
-2. Save the token: `mkdir -p /volume1/docker/.hood-vent && echo '<token>' > /volume1/docker/.hood-vent/ha_token && chmod 600 /volume1/docker/.hood-vent/ha_token`
-3. DSM → Control Panel → **Task Scheduler** → Scheduled Task → run as **root**,
-   every ~5 min: `sh /volume1/docker/ha-hood-vent/scripts/nas-sync.sh`
+2. Create the config + token under `/volume1/docker/.hood-vent/`:
+   - `config` with `REPO_DIR`, `HA_PACKAGES_DIR`
+     (`/volume1/docker/homeassistant/packages`), and `HA_URL`
+   - `ha_token` — a long-lived token, `chmod 600`
+3. DSM → Control Panel → **Task Scheduler** → Scheduled Task → run as **your
+   account**, every ~5 min: `sh /volume1/docker/ha-hood-vent/scripts/nas-sync.sh`
 
-Running as root avoids the sudo prompt; the script only touches HA when the
-package file actually changed.
+The script only touches HA when the package file actually changed, so it's cheap
+to run often.
 
 > A GitHub Action could do this on push instead, but it would need network
 > access to the NAS (the SSH port isn't internet-exposed), so it'd require a

@@ -4,9 +4,13 @@
 # instance and reload it, in one command.
 #
 # HA here runs as a Docker container (linuxserver/homeassistant, no Supervisor)
-# on a Synology NAS. Its /config is a root-owned named volume, so the package
-# file is copied in with `sudo docker cp` over SSH (you'll be prompted for the
-# NAS sudo password once), then HA is told to reload via its REST API.
+# on a Synology NAS. The package file is copied into the container with
+# `sudo docker cp` over SSH (one sudo prompt — `docker` needs root on the NAS),
+# then HA is told to reload via its REST API.
+#
+# For a fully hands-off alternative that needs no sudo — HA's /config is a bind
+# mount at /volume1/docker/homeassistant that your user owns, so it copies the
+# file straight in and reloads via the API — see scripts/nas-sync.sh.
 #
 # Usage:
 #   ./scripts/deploy.sh              # copy package + reload_all (no restart)
