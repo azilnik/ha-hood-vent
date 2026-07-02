@@ -14,27 +14,28 @@
 # That's it. This file reads your device IDs from secrets.yaml automatically.
 
 # ============================================================================
-# INPUT NUMBERS - Adjustable thresholds (tune via UI)
+# INPUT NUMBERS - Adjustable thresholds (tune via the dashboard sliders)
 # ============================================================================
+# No `initial:` on purpose. With `initial:` set, HA resets these to it on every
+# restart/reload, wiping your tuning. Without it, input_number restores its last
+# value, so slider changes persist. First-run defaults are seeded ONCE by the
+# "Seed Defaults" automation below (guarded by input_boolean.hood_defaults_seeded).
 input_number:
   hood_temp_rise_threshold:
     name: "Hood: Temp Rise Threshold (°/min)"
     min: 0.1
     max: 3.0
     step: 0.1
-    initial: 0.5
     unit_of_measurement: "°/min"
     icon: mdi:thermometer-chevron-up
 
-  # NOTE: No longer used by the OFF automation (which now keys off
-  # stove_activity_detected). Kept for backward compatibility; safe to remove
-  # in a future cleanup along with its dashboard row.
+  # No longer used by the OFF automation (which keys off stove_activity_detected).
+  # Kept for backward compatibility; safe to remove in a future cleanup.
   hood_temp_fall_threshold:
     name: "Hood: Temp Fall Threshold (°/min)"
     min: -0.5
     max: 0.5
     step: 0.05
-    initial: 0.1
     unit_of_measurement: "°/min"
     icon: mdi:thermometer-chevron-down
 
@@ -43,10 +44,6 @@ input_number:
     min: 0.1
     max: 5.0
     step: 0.1
-    # 1.0 proved too sensitive in a humid kitchen (a room already at ~60% RH
-    # produced ~1.4 %/min swings from ambient night air, tripping a false ON).
-    # 1.5 rejects that noise; real steam cooking rises far faster.
-    initial: 1.5
     unit_of_measurement: "%/min"
     icon: mdi:water-percent
 
@@ -55,7 +52,6 @@ input_number:
     min: 1
     max: 10
     step: 1
-    initial: 2
     unit_of_measurement: "min"
     icon: mdi:timer-outline
 
@@ -64,21 +60,18 @@ input_number:
     min: 15
     max: 180
     step: 5
-    initial: 60
     unit_of_measurement: "s"
     icon: mdi:timer-check-outline
 
   # Warm-ambient (summer) desensitization. When the kitchen's smoothed ambient
-  # temperature climbs above the baseline below, the ON thresholds are scaled up
-  # so hot/humid summer air, AC cycling, an open window, or someone just
-  # breathing near the sensor no longer looks like cooking. When the kitchen is
-  # cool (winter), the boost is zero and full sensitivity is preserved.
+  # temperature climbs above the baseline, the ON thresholds scale up so hot/humid
+  # summer air doesn't look like cooking. Off by default (boost seeded to 0):
+  # only useful when the temp sensor reads true ROOM ambient, not the stovetop.
   hood_warm_ambient_temp:
     name: "Hood: Warm Ambient Baseline (°C)"
     min: 15
     max: 30
     step: 0.5
-    initial: 24
     unit_of_measurement: "°C"
     icon: mdi:sun-thermometer
 
@@ -87,17 +80,11 @@ input_number:
     min: 0
     max: 0.3
     step: 0.01
-    # Off by default (opt-in). The warm-ambient boost only makes sense when the
-    # temperature sensor reads true ROOM ambient. On a stovetop-mounted sensor
-    # (the common setup) the 30-min mean is polluted by cooking heat, so a
-    # positive boost desensitizes detection mid-cook — backwards. Raise this
-    # only if your temp source is a wall/room sensor. See docs/tuning.md.
-    initial: 0
     unit_of_measurement: "×/°C"
     icon: mdi:tune-vertical
 
 # ============================================================================
-# INPUT BOOLEANS - Manual override and enable/disable
+# INPUT BOOLEANS - Manual override, enable/disable, first-run seed flag
 # ============================================================================
 input_boolean:
   hood_automation_enabled:
@@ -107,6 +94,12 @@ input_boolean:
   hood_manual_override:
     name: "Hood: Manual Override Active"
     icon: mdi:hand-back-left
+
+  # Internal bookkeeping: turned on once after first-run defaults are seeded,
+  # so the seed automation never overwrites your own values afterward.
+  hood_defaults_seeded:
+    name: "Hood: Defaults Seeded (internal)"
+    icon: mdi:cog-sync
 
 # ============================================================================
 # TEMPLATE SENSORS - Derivative calculations
@@ -196,6 +189,41 @@ sensor:
 # AUTOMATIONS
 # ============================================================================
 automation:
+  # Seed first-run defaults exactly once. The input_numbers above have no
+  # `initial:` so your tuning persists across restarts/reloads; this fills in
+  # sensible starting values the first time the package is installed, then flips
+  # hood_defaults_seeded on so it never touches your values again.
+  - id: hood_vent_seed_defaults
+    alias: "Hood Vent: Seed Defaults (first run)"
+    description: "One-time seed of tunable defaults, guarded by hood_defaults_seeded"
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: state
+        entity_id: input_boolean.hood_defaults_seeded
+        state: "off"
+    action:
+      - repeat:
+          for_each:
+            - { e: input_number.hood_temp_rise_threshold, v: 0.5 }
+            - { e: input_number.hood_temp_fall_threshold, v: 0.1 }
+            - { e: input_number.hood_humidity_rise_threshold, v: 1.5 }
+            - { e: input_number.hood_off_delay_minutes, v: 2 }
+            - { e: input_number.hood_on_confirm_seconds, v: 60 }
+            - { e: input_number.hood_warm_ambient_temp, v: 24 }
+            - { e: input_number.hood_warm_ambient_boost, v: 0 }
+          sequence:
+            - service: input_number.set_value
+              target:
+                entity_id: "{{ repeat.item.e }}"
+              data:
+                value: "{{ repeat.item.v }}"
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hood_defaults_seeded
+    mode: single
+
   - id: hood_vent_auto_on
     alias: "Hood Vent: Auto On"
     description: "Turn on hood when temperature or humidity rising quickly"
