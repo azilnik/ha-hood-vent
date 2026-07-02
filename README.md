@@ -89,6 +89,7 @@ Once it's running, there are a few things worth checking out:
 - **[Dashboard Card](docs/dashboard.md)** — add a control panel with live rate-of-change graphs and tuning sliders
 - **[Tuning Guide](docs/tuning.md)** — dial in the sensitivity for your specific kitchen and stove
 - **[Troubleshooting](docs/troubleshooting.md)** — if something isn't working right
+- **[Development & Deployment](docs/development.md)** — editing this repo and flowing changes into a running HA
 
 ## Features
 
@@ -96,7 +97,7 @@ Once it's running, there are a few things worth checking out:
 |---------|-------------|
 | **Rate-of-change detection** | Responds to cooking activity, not absolute temp — way faster on and off |
 | **Dual triggers** | Watches both temperature and humidity (steam from boiling triggers even when temp rise is slow) |
-| **Warm-weather immunity** | Auto-stiffens the trigger as the kitchen warms so muggy summer air doesn't switch the hood — while leaving winter sensitivity untouched |
+| **Warm-weather immunity** *(opt-in)* | Optionally auto-stiffens the trigger as the kitchen warms so muggy summer air doesn't switch the hood. Off by default — enable only with a room-ambient temp sensor ([why](docs/tuning.md)) |
 | **UI-adjustable thresholds** | Tune sensitivity with dashboard sliders — no more YAML editing after initial setup |
 | **Manual override** | Manually toggle the hood and automation pauses for 30 min so it doesn't fight you |
 | **Safety shutoff** | Auto-off after 2 hours max, just in case |

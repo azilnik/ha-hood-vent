@@ -26,6 +26,9 @@ input_number:
     unit_of_measurement: "°/min"
     icon: mdi:thermometer-chevron-up
 
+  # NOTE: No longer used by the OFF automation (which now keys off
+  # stove_activity_detected). Kept for backward compatibility; safe to remove
+  # in a future cleanup along with its dashboard row.
   hood_temp_fall_threshold:
     name: "Hood: Temp Fall Threshold (°/min)"
     min: -0.5
@@ -40,7 +43,10 @@ input_number:
     min: 0.1
     max: 5.0
     step: 0.1
-    initial: 1.0
+    # 1.0 proved too sensitive in a humid kitchen (a room already at ~60% RH
+    # produced ~1.4 %/min swings from ambient night air, tripping a false ON).
+    # 1.5 rejects that noise; real steam cooking rises far faster.
+    initial: 1.5
     unit_of_measurement: "%/min"
     icon: mdi:water-percent
 
@@ -81,7 +87,12 @@ input_number:
     min: 0
     max: 0.3
     step: 0.01
-    initial: 0.06
+    # Off by default (opt-in). The warm-ambient boost only makes sense when the
+    # temperature sensor reads true ROOM ambient. On a stovetop-mounted sensor
+    # (the common setup) the 30-min mean is polluted by cooking heat, so a
+    # positive boost desensitizes detection mid-cook — backwards. Raise this
+    # only if your temp source is a wall/room sensor. See docs/tuning.md.
+    initial: 0
     unit_of_measurement: "×/°C"
     icon: mdi:tune-vertical
 
@@ -214,13 +225,17 @@ automation:
 
   - id: hood_vent_auto_off
     alias: "Hood Vent: Auto Off"
-    description: "Turn off hood when temperature rate falls below threshold"
+    description: "Turn off once stove activity has stopped (temp AND humidity settled)"
+    # Trigger off the stove-activity sensor, not temperature alone. The old
+    # temp-rate-only trigger never fired when the hood was turned ON by a
+    # humidity rise with flat temperature: temp_rate was already below the fall
+    # threshold, so there was no high->low edge to start the timer, and the hood
+    # stayed on until the 2h safety cutoff. stove_activity_detected already folds
+    # in BOTH temp and humidity, so keying off it makes ON and OFF symmetric.
     trigger:
-      - platform: template
-        value_template: >
-          {% set temp_rate = states('sensor.kitchen_temp_rate_of_change') | float(0) %}
-          {% set threshold = states('input_number.hood_temp_fall_threshold') | float(0.1) %}
-          {{ temp_rate < threshold }}
+      - platform: state
+        entity_id: binary_sensor.stove_activity_detected
+        to: "off"
         for:
           minutes: "{{ states('input_number.hood_off_delay_minutes') | int(2) }}"
     condition:
@@ -232,9 +247,6 @@ automation:
         state: "on"
       - condition: state
         entity_id: input_boolean.hood_manual_override
-        state: "off"
-      - condition: state
-        entity_id: binary_sensor.stove_activity_detected
         state: "off"
     action:
       - service: switch.turn_off
@@ -255,7 +267,12 @@ automation:
         entity_id: !secret hood_switch
     condition:
       - condition: template
-        value_template: "{{ trigger.context.user_id is not none }}"
+        # Guard trigger.context: at startup validation (and reloads) the
+        # condition is rendered once with no trigger, so an unguarded
+        # trigger.context.user_id throws UndefinedError. Short-circuit first.
+        value_template: >-
+          {{ trigger is defined and trigger.context is defined
+             and trigger.context.user_id is not none }}
     action:
       - service: input_boolean.turn_on
         target:

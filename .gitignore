@@ -10,3 +10,6 @@ Thumbs.db
 
 # Home Assistant secrets
 secrets.yaml
+
+# Deploy config (holds a long-lived HA token — never commit)
+deploy.env

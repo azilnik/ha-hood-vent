@@ -12,7 +12,7 @@ Every kitchen is different — sensor distance from the stove, ventilation, stov
 | Off Delay | 2 min | How long the rate must stay low before the hood turns OFF |
 | On Confirmation | 60 s | How long activity must be sustained before the hood turns ON |
 | Warm Ambient Baseline | 24 °C | Kitchen temp above which summer desensitization kicks in |
-| Warm Ambient Boost | 0.06 ×/°C | How much to stiffen the ON thresholds per °C above the baseline |
+| Warm Ambient Boost | 0 ×/°C (off) | How much to stiffen the ON thresholds per °C above the baseline. **Opt-in — off by default.** |
 
 ## Rejecting Warm-Weather False Triggers
 
@@ -26,10 +26,18 @@ mechanisms keep it from switching the hood:
 2. **Confirmation** — activity has to stay above threshold for the full **On
    Confirmation** time (60 s by default) before the hood turns on. Transients
    don't last that long; real cooking does.
-3. **Warm-ambient boost** — the automation watches the kitchen's *smoothed
-   ambient temperature* (`sensor.kitchen_temp_average`). For every degree it
-   sits above the **Warm Ambient Baseline**, the ON thresholds are multiplied
-   up by the **Warm Ambient Boost**. Effective threshold = base × (1 + degrees‑above‑baseline × boost).
+3. **Warm-ambient boost** *(opt-in — off by default)* — the automation watches
+   the kitchen's *smoothed ambient temperature* (`sensor.kitchen_temp_average`).
+   For every degree it sits above the **Warm Ambient Baseline**, the ON
+   thresholds are multiplied up by the **Warm Ambient Boost**. Effective
+   threshold = base × (1 + degrees‑above‑baseline × boost).
+
+   > ⚠️ **Only enable this if your temperature sensor reads true room ambient**
+   > (a wall/room sensor). If it's mounted on or near the stovetop — the common
+   > setup — its 30-minute mean is polluted by the cooking heat itself, so a
+   > positive boost *desensitizes detection while you're cooking*, which is
+   > backwards. On a stovetop-mounted sensor, leave Warm Ambient Boost at **0**
+   > and rely on smoothing + confirmation above.
 
    | Kitchen ambient | Season (Toronto) | Effective temp threshold | Effective humidity threshold |
    |-----------------|------------------|--------------------------|------------------------------|
@@ -38,13 +46,15 @@ mechanisms keep it from switching the hood:
    | 28 °C | Summer | 0.62 °/min | 1.24 %/min |
    | 32 °C | Heat wave | 0.74 °/min | 1.48 %/min |
 
-   Because the boost is zero until the kitchen is genuinely warm, **winter
+   The table above shows the effect *when enabled*. With a room-ambient sensor,
+   the boost is zero until the kitchen is genuinely warm, so **winter
    sensitivity is untouched** — you're only trading a little summer twitchiness
    for a stiffer trigger on hot days.
 
-**Still getting summer false triggers?** Raise **Warm Ambient Boost** (e.g. to
-0.10) or lower the **Warm Ambient Baseline**. **Summer cooking not detected?**
-Lower the boost or raise the baseline.
+**Enabling it (room-ambient sensors only):** raise **Warm Ambient Boost** to
+~0.06 and set **Warm Ambient Baseline** to your normal spring/fall room temp.
+Then, still getting summer false triggers? Raise the boost (e.g. 0.10) or lower
+the baseline. Summer cooking not detected? Lower the boost or raise the baseline.
 
 ## How to Tune
 
