@@ -104,11 +104,9 @@ cards:
       - entity: sensor.kitchen_temp_average
         name: Current smoothed ambient temp
       - type: section
-        label: OFF Triggers
-      - entity: input_number.hood_temp_fall_threshold
-        name: Temp rate below this = cooling
+        label: OFF Delay (stove activity clears, then timer starts)
       - entity: input_number.hood_off_delay_minutes
-        name: Minutes at low rate before OFF
+        name: Minutes after activity clears before OFF
       - type: section
         label: Overrides
       - entity: input_boolean.hood_automation_enabled
