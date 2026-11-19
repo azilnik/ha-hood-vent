@@ -283,7 +283,7 @@ automation:
       - service: logbook.log
         data:
           name: "Hood Vent"
-          message: "Auto OFF - Cooling detected"
+          message: "Auto OFF - Stove activity settled"
           entity_id: !secret hood_switch
     mode: single
 
